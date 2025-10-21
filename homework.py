@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from http import HTTPStatus
 
 import requests
 from dotenv import load_dotenv
@@ -15,7 +16,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     filename='homework.log',
     filemode='w',
-    format='%(asctime)s  %(levelname)s %(message)s'
+    format='%(asctime)s %(levelname)s %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -58,9 +59,9 @@ def send_message(bot, message):
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logging.debug('Сообщение отправлено')
-    except Exception as e:
+    except Exception as error:
         raise TelegramException(
-            f'Не удалось отправить сообщение в телеграм {e}'
+            f'Не удалось отправить сообщение в телеграм {error}'
         )
 
 
@@ -70,13 +71,13 @@ def get_api_answer(timestamp):
     params = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=headers, params=params)
-        if response.status_code != 200:
+        if response.status_code != HTTPStatus.OK:
             message = f'Эндпоинт практикума {ENDPOINT} недоступен.'
             logger.error(message)
             raise PracException(message)
         return response.json()
-    except Exception as e:
-        message = f'Не удалось получить статус домашки {e}'
+    except Exception as error:
+        message = f'Не удалось получить статус домашки {error}'
         logger.error(message)
         raise PracException(message)
 
@@ -132,8 +133,10 @@ def main():
                 homework_data = homeworks_data[0]
                 message = parse_status(homework_data)
                 if last_status_message != message:
+                    last_status_message = message
                     send_message(bot, message)
                     timestamp = response.get('current_date')
+                    logger.debug('Сообщение успешно отправлено')
             else:
                 logger.debug('Новых проверок не поступало')
         except TelegramException as error:
