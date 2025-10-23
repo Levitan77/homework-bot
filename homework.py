@@ -53,11 +53,13 @@ def send_message(bot, message):
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logging.debug('Сообщение отправлено')
+        return True
     except (telebot.apihelper.ApiException,
             requests.RequestException) as error:
         logging.error(
             f'Не удалось отправить сообщение в телеграм {error}'
         )
+        return False
 
 
 def get_api_answer(timestamp):
@@ -101,7 +103,7 @@ def check_response(response):
         raise KeyError(message)
     homeworks = response['homeworks']
     if not isinstance(homeworks, list):
-        message = 'По ключу homeworks отсутствует список'
+        message = f'По ключу homeworks не список, а тип {type(homeworks)}'
         raise TypeError(message)
     return homeworks
 
@@ -135,8 +137,6 @@ def main():
                 message = parse_status(homework_data)
                 if send_message(bot, message):
                     timestamp = response.get('current_date', timestamp)
-                else:
-                    logging.error('Ошибка работы телеграма')
             else:
                 logging.debug('Новых проверок не поступало')
         except Exception as error:
@@ -153,12 +153,8 @@ if __name__ == '__main__':
     logging.basicConfig(
         level=logging.DEBUG,
         stream=sys.stdout,
-        format='%(asctime)s %(levelname)s %(message)s'
-    )
-    logger = logging.getLogger(__name__)
-
-    logger.addHandler(
-        logging.StreamHandler()
+        format='%(asctime)s %(levelname)s %(message)s',
+        handlers=[logging.StreamHandler(sys.stdout)]
     )
 
     main()
